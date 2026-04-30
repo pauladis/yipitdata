@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Loader } from 'lucide-react';
 import apiClient, { Company } from '../utils/api';
@@ -8,14 +8,36 @@ const HomePage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sectorFilter, setSectorFilter] = useState('');
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [allCompanies, setAllCompanies] = useState<Company[]>([]);
+  const [filteredCompanies, setFilteredCompanies] = useState<Company[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
   const [sectors, setSectors] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchCompanies();
   }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowDropdown(false);
+      }
+    };
+
+    if (showDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [showDropdown]);
 
   const fetchCompanies = async (query?: string, sector?: string) => {
     setLoading(true);
@@ -23,6 +45,7 @@ const HomePage: React.FC = () => {
     try {
       const response = await apiClient.searchCompanies(query, sector);
       setCompanies(response.data.companies);
+      setAllCompanies(response.data.companies);
       
       // Extract unique sectors
       const uniqueSectors = Array.from(
@@ -35,6 +58,26 @@ const HomePage: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSearchInputChange = (value: string) => {
+    setSearchQuery(value);
+    if (value.trim()) {
+      const filtered = allCompanies.filter(
+        (company) =>
+          company.ticker.toUpperCase().includes(value.toUpperCase()) ||
+          company.company_name.toUpperCase().includes(value.toUpperCase())
+      );
+      setFilteredCompanies(filtered);
+      setShowDropdown(true);
+    } else {
+      setFilteredCompanies([]);
+      setShowDropdown(false);
+    }
+  };
+
+  const handleSelectCompany = (ticker: string) => {
+    navigate(`/company/${ticker}`);
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -58,15 +101,44 @@ const HomePage: React.FC = () => {
         <h2>Find Companies & KPIs</h2>
         <form onSubmit={handleSearch} className="search-form">
           <div className="search-inputs">
-            <div className="input-group">
+            <div className="input-group search-dropdown-container" ref={dropdownRef}>
               <input
                 type="text"
-                placeholder="Search by ticker or company name..."
+                placeholder="Search by ticker or company name (e.g., AC, ACME)..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => handleSearchInputChange(e.target.value)}
+                onFocus={() => {
+                  if (searchQuery.trim()) {
+                    setShowDropdown(true);
+                  }
+                }}
                 className="search-input"
               />
               <Search size={20} className="search-icon" />
+              
+              {showDropdown && filteredCompanies.length > 0 && (
+                <div className="search-dropdown-list">
+                  {filteredCompanies.map((company) => (
+                    <div
+                      key={company.ticker}
+                      className="search-dropdown-item"
+                      onClick={() => handleSelectCompany(company.ticker)}
+                    >
+                      <div className="search-dropdown-ticker">{company.ticker}</div>
+                      <div className="search-dropdown-details">
+                        <div className="search-dropdown-name">{company.company_name}</div>
+                        <div className="search-dropdown-sector">{company.sector}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {showDropdown && filteredCompanies.length === 0 && searchQuery.trim() && (
+                <div className="search-dropdown-empty">
+                  <p>No companies found matching "{searchQuery}"</p>
+                </div>
+              )}
             </div>
             <select
               value={sectorFilter}
