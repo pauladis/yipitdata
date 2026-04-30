@@ -13,10 +13,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app/ app/
 COPY run_server.py .
 
-RUN mkdir -p /app/data
-
-RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
-USER appuser
+RUN mkdir -p /app/data && chmod 777 /app/data
 
 EXPOSE 8000
 

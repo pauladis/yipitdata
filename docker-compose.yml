@@ -15,7 +15,7 @@ services:
       - ./data:/app/data:ro
     environment:
       - PYTHONUNBUFFERED=1
-      - DATABASE_URL=sqlite:////app/data/kpi.db
+      - DATABASE_URL=sqlite:///./kpi.db
       - LOG_LEVEL=info
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
