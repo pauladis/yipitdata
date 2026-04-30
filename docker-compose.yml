@@ -26,6 +26,20 @@ services:
     networks:
       - yipitdata-network
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: yipitdata-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://backend:8000
+    depends_on:
+      - backend
+    networks:
+      - yipitdata-network
+
 volumes:
   db_data:
     driver: local
