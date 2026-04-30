@@ -16,6 +16,14 @@ import { ArrowUp, ArrowDown, Minus, Loader } from 'lucide-react';
 import apiClient, { CompanyKPIs, KPISummary, KPIHistory } from '../utils/api';
 import '../styles/CompanyPage.css';
 
+interface ChartDataPoint {
+  date: string;
+  historicalValue: number;
+  quarter?: string;
+  isHistorical: boolean;
+  qtdValue?: number;
+}
+
 const CompanyPage: React.FC = () => {
   const { ticker } = useParams<{ ticker: string }>();
   const navigate = useNavigate();
@@ -24,6 +32,7 @@ const CompanyPage: React.FC = () => {
   const [selectedKPI, setSelectedKPI] = useState<string | null>(null);
   const [summary, setSummary] = useState<KPISummary | null>(null);
   const [history, setHistory] = useState<KPIHistory | null>(null);
+  const [qtdHistory, setQtdHistory] = useState<KPIHistory | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [chartType, setChartType] = useState<'line' | 'bar'>('line');
@@ -65,12 +74,14 @@ const CompanyPage: React.FC = () => {
     if (!selectedKPI) return;
 
     try {
-      const [summaryRes, historyRes] = await Promise.all([
+      const [summaryRes, historyRes, qtdRes] = await Promise.all([
         apiClient.getKPISummary(ticker!, selectedKPI),
-        apiClient.getKPIHistory(ticker!, selectedKPI, startDate || undefined, endDate || undefined),
+        apiClient.getKPIHistory(ticker!, selectedKPI, startDate || undefined, endDate || undefined, false),
+        apiClient.getKPIHistory(ticker!, selectedKPI, startDate || undefined, endDate || undefined, true),
       ]);
       setSummary(summaryRes.data);
       setHistory(historyRes.data);
+      setQtdHistory(qtdRes.data);
     } catch (err) {
       console.error('Failed to load KPI data', err);
     }
@@ -103,11 +114,23 @@ const CompanyPage: React.FC = () => {
     );
   }
 
-  const chartData = history?.data.map((d) => ({
+  // Merge historical and QTD data for combined view
+  const chartData: ChartDataPoint[] = (history?.data || []).map((d) => ({
     date: d.period_end,
-    value: d.value,
+    historicalValue: d.value,
     quarter: d.fiscal_quarter,
-  })) || [];
+    isHistorical: true,
+  }));
+
+  // Add QTD data points
+  if (qtdHistory?.data) {
+    qtdHistory.data.forEach((qtd) => {
+      const existing = chartData.find((c) => c.date === qtd.period_end);
+      if (existing) {
+        existing.qtdValue = qtd.value;
+      }
+    });
+  }
 
   const getTrendIcon = (trend?: string) => {
     if (trend === 'up') return <ArrowUp size={20} className="trend-up" />;
@@ -198,7 +221,7 @@ const CompanyPage: React.FC = () => {
           {history && chartData.length > 0 && (
             <section className="chart-section">
               <div className="chart-header">
-                <h3>Historical Data</h3>
+                <h3>Historical Data with QTD Overlay</h3>
                 <div className="chart-controls">
                   <button
                     className={`chart-btn ${chartType === 'line' ? 'active' : ''}`}
@@ -257,20 +280,33 @@ const CompanyPage: React.FC = () => {
                     />
                     <YAxis />
                     <Tooltip
-                      formatter={(value: number) =>
-                        value.toLocaleString('en-US', {
+                      formatter={(value: any) =>
+                        value?.toLocaleString('en-US', {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
-                        })
+                        }) || 'N/A'
                       }
                     />
+                    <Legend />
                     <Line
                       type="monotone"
-                      dataKey="value"
+                      dataKey="historicalValue"
                       stroke="#3b82f6"
+                      name="Historical"
                       dot={{ fill: '#3b82f6', r: 5 }}
                       activeDot={{ r: 7 }}
                     />
+                    {chartData.some((d) => d.qtdValue) && (
+                      <Line
+                        type="monotone"
+                        dataKey="qtdValue"
+                        stroke="#f59e0b"
+                        name="QTD"
+                        dot={{ fill: '#f59e0b', r: 5 }}
+                        activeDot={{ r: 7 }}
+                        strokeDasharray="5 5"
+                      />
+                    )}
                   </LineChart>
                 ) : (
                   <BarChart data={chartData}>
@@ -283,14 +319,18 @@ const CompanyPage: React.FC = () => {
                     />
                     <YAxis />
                     <Tooltip
-                      formatter={(value: number) =>
-                        value.toLocaleString('en-US', {
+                      formatter={(value: any) =>
+                        value?.toLocaleString('en-US', {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
-                        })
+                        }) || 'N/A'
                       }
                     />
-                    <Bar dataKey="value" fill="#3b82f6" />
+                    <Legend />
+                    <Bar dataKey="historicalValue" fill="#3b82f6" name="Historical" />
+                    {chartData.some((d) => d.qtdValue) && (
+                      <Bar dataKey="qtdValue" fill="#f59e0b" name="QTD" />
+                    )}
                   </BarChart>
                 )}
               </ResponsiveContainer>

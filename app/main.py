@@ -66,8 +66,12 @@ async def search_companies(
     db: Session = Depends(get_db)
 ):
     """Search for companies by name/ticker or filter by sector"""
-    results = services.get_companies(db, query=query, sector=sector)
-    return {"companies": results}
+    try:
+        results = services.get_companies(db, query=query, sector=sector)
+        return {"companies": results}
+    except Exception as e:
+        logger.error(f"Error searching companies: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error while searching companies")
 
 
 @app.get("/companies/{ticker}/kpis")
@@ -76,33 +80,58 @@ async def get_company_kpis(
     db: Session = Depends(get_db)
 ):
     """Get all available KPIs for a company"""
-    result = services.get_company_kpis(db, ticker)
-    if not result:
-        raise HTTPException(status_code=404, detail="Company not found")
-    return result
+    try:
+        ticker = ticker.strip().upper()
+        if not ticker:
+            raise HTTPException(status_code=400, detail="Ticker is required")
+        
+        result = services.get_company_kpis(db, ticker)
+        if not result:
+            raise HTTPException(status_code=404, detail=f"Company with ticker '{ticker}' not found")
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting company KPIs: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error while fetching company KPIs")
 
 
 # ============== KPI Data Endpoints ==============
 
 @app.get("/kpi/history")
 async def get_kpi_history(
-    ticker: str = Query(..., description="Company ticker"),
-    kpi_name: str = Query(..., description="KPI name"),
+    ticker: str = Query(..., min_length=1, description="Company ticker"),
+    kpi_name: str = Query(..., min_length=1, description="KPI name"),
     start_date: Optional[date] = Query(None, description="Start date filter"),
     end_date: Optional[date] = Query(None, description="End date filter"),
     is_qtd: bool = Query(False, description="Get QTD data instead of historical"),
     db: Session = Depends(get_db)
 ):
     """Get historical or QTD data for a KPI"""
-    result = services.get_kpi_history(
-        db, ticker, kpi_name, 
-        start_date=start_date, 
-        end_date=end_date,
-        is_qtd=is_qtd
-    )
-    if not result:
-        raise HTTPException(status_code=404, detail="KPI data not found")
-    return result
+    try:
+        ticker = ticker.strip().upper()
+        kpi_name = kpi_name.strip()
+        
+        if not ticker or not kpi_name:
+            raise HTTPException(status_code=400, detail="Ticker and KPI name are required")
+        
+        if start_date and end_date and start_date > end_date:
+            raise HTTPException(status_code=400, detail="Start date must be before end date")
+        
+        result = services.get_kpi_history(
+            db, ticker, kpi_name, 
+            start_date=start_date, 
+            end_date=end_date,
+            is_qtd=is_qtd
+        )
+        if not result:
+            raise HTTPException(status_code=404, detail=f"No {'QTD' if is_qtd else 'historical'} data found for {ticker} {kpi_name}")
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting KPI history: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error while fetching KPI history")
 
 
 @app.get("/kpi/qtd")
@@ -120,8 +149,8 @@ async def get_kpi_qtd(
 
 @app.get("/kpi/summary")
 async def get_kpi_summary(
-    ticker: str = Query(..., description="Company ticker"),
-    kpi_name: str = Query(..., description="KPI name"),
+    ticker: str = Query(..., min_length=1, description="Company ticker"),
+    kpi_name: str = Query(..., min_length=1, description="KPI name"),
     db: Session = Depends(get_db)
 ) -> KPISummary:
     """
@@ -133,10 +162,25 @@ async def get_kpi_summary(
     - QTD vs last quarter comparison
     - Trend indicator (up/down/flat)
     """
-    result = services.get_kpi_summary(db, ticker, kpi_name)
-    if not result:
-        raise HTTPException(status_code=404, detail="KPI not found")
-    return result
+    try:
+        ticker = ticker.strip().upper()
+        kpi_name = kpi_name.strip()
+        
+        if not ticker or not kpi_name:
+            raise HTTPException(status_code=400, detail="Ticker and KPI name are required")
+        
+        result = services.get_kpi_summary(db, ticker, kpi_name)
+        if not result:
+            raise HTTPException(
+                status_code=404, 
+                detail=f"No KPI data found for ticker '{ticker}' and KPI '{kpi_name}'"
+            )
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting KPI summary: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error while fetching KPI summary")
 
 
 @app.get("/kpi/compare")
