@@ -27,6 +27,10 @@ const CompanyPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [chartType, setChartType] = useState<'line' | 'bar'>('line');
+  
+  // Date range filters
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
 
   useEffect(() => {
     if (ticker) {
@@ -38,7 +42,7 @@ const CompanyPage: React.FC = () => {
     if (ticker && selectedKPI) {
       loadKPIData();
     }
-  }, [ticker, selectedKPI]);
+  }, [ticker, selectedKPI, startDate, endDate]);
 
   const loadCompanyData = async () => {
     setLoading(true);
@@ -63,13 +67,18 @@ const CompanyPage: React.FC = () => {
     try {
       const [summaryRes, historyRes] = await Promise.all([
         apiClient.getKPISummary(ticker!, selectedKPI),
-        apiClient.getKPIHistory(ticker!, selectedKPI),
+        apiClient.getKPIHistory(ticker!, selectedKPI, startDate || undefined, endDate || undefined),
       ]);
       setSummary(summaryRes.data);
       setHistory(historyRes.data);
     } catch (err) {
       console.error('Failed to load KPI data', err);
     }
+  };
+
+  const handleResetDates = () => {
+    setStartDate('');
+    setEndDate('');
   };
 
   if (loading) {
@@ -205,6 +214,37 @@ const CompanyPage: React.FC = () => {
                   </button>
                 </div>
               </div>
+
+              <div className="date-filter">
+                <div className="date-inputs">
+                  <div className="date-group">
+                    <label>Start Date:</label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="date-input"
+                    />
+                  </div>
+                  <div className="date-group">
+                    <label>End Date:</label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="date-input"
+                    />
+                  </div>
+                  <button
+                    onClick={handleResetDates}
+                    className="btn btn-secondary"
+                    style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}
+                  >
+                    Reset Dates
+                  </button>
+                </div>
+              </div>
+
               <ResponsiveContainer width="100%" height={400}>
                 {chartType === 'line' ? (
                   <LineChart data={chartData}>
@@ -256,6 +296,7 @@ const CompanyPage: React.FC = () => {
               </ResponsiveContainer>
               <p className="chart-footer">
                 Last updated: {new Date().toLocaleDateString()}
+                {startDate || endDate ? ` | Filtered: ${startDate || 'Start'} to ${endDate || 'End'}` : ''}
               </p>
             </section>
           )}
