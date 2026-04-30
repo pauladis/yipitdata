@@ -183,6 +183,17 @@ async def get_kpi_summary(
         raise HTTPException(status_code=500, detail="Internal server error while fetching KPI summary")
 
 
+@app.get("/kpi/names")
+async def get_kpi_names(db: Session = Depends(get_db)):
+    """Get list of all available KPI names"""
+    try:
+        kpi_names = services.get_all_kpi_names(db)
+        return kpi_names
+    except Exception as e:
+        logger.error(f"Error getting KPI names: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error while fetching KPI names")
+
+
 @app.get("/kpi/compare")
 async def compare_companies_kpi(
     tickers: str = Query(..., description="Comma-separated list of tickers"),

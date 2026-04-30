@@ -4,6 +4,7 @@ import { Search } from 'lucide-react';
 import apiClient from './utils/api';
 import HomePage from './pages/HomePage';
 import CompanyPage from './pages/CompanyPage';
+import ComparePage from './pages/ComparePage';
 import './styles/App.css';
 
 const App: React.FC = () => {
@@ -25,6 +26,10 @@ const App: React.FC = () => {
             <Link to="/" className="logo">
               <h1>📊 YipitData KPI Analytics</h1>
             </Link>
+            <nav className="nav-links">
+              <Link to="/" className="nav-link">Home</Link>
+              <Link to="/compare" className="nav-link">Compare</Link>
+            </nav>
             <div className="header-status">
               {isApiHealthy ? (
                 <span className="status-healthy">● API Connected</span>
@@ -39,6 +44,7 @@ const App: React.FC = () => {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/company/:ticker" element={<CompanyPage />} />
+            <Route path="/compare" element={<ComparePage />} />
           </Routes>
         </main>
 

@@ -50,6 +50,12 @@ def get_company_kpis(db: Session, ticker: str) -> Optional[CompanyKPIs]:
     )
 
 
+def get_all_kpi_names(db: Session) -> List[str]:
+    """Get list of all unique KPI names in the database"""
+    results = db.query(KPIData.kpi_name).distinct().order_by(KPIData.kpi_name).all()
+    return [r[0] for r in results]
+
+
 def get_kpi_history(
     db: Session,
     ticker: str,
