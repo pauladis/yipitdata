@@ -31,7 +31,7 @@ Frontend (React)
 ↓
 Backend API (FastAPI)
 ↓
-SQLite (loaded from CSV)
+postgressql (loaded from CSV)
 
 MCP Server (FastMCP)
 ↑
@@ -45,12 +45,12 @@ Reuses Backend API
 - Initial dataset: CSV file (`kpi_sample_2000.csv`)
 - Assumption: Data is already clean and processed
 - Load strategy:
-  - Load CSV into SQLite on startup
+  - Load CSV into postgressql on startup
   - Replace table on each load (idempotent)
 
 ---
 
-## 🗄️ Database Design (SQLite)
+## 🗄️ Database Design (postgressql)
 
 ### Table: `kpi_data`
 
@@ -168,9 +168,9 @@ QTD is:
 Intra-quarter estimate
 Compared directionally (not exact match)
 ⚖️ Trade-offs
-SQLite vs Postgres
+postgressql vs Postgres
 
-SQLite
+postgressql
 
 Pros: simple, fast setup, sufficient for small data
 Cons: limited scalability, concurrency
@@ -190,7 +190,7 @@ No Caching
 Reason
 
 Dataset is small
-SQLite queries are fast
+postgressql queries are fast
 Avoid premature optimization
 🧪 Failure Handling
 
@@ -206,7 +206,7 @@ Single container:
 
 FastAPI backend
 MCP server
-SQLite DB
+postgressql DB
 
 Run via:
 
@@ -230,7 +230,7 @@ Add caching layer (Redis)
 Improve search (ElasticSearch)
 Add authentication
 🧭 Implementation Order
-CSV → SQLite loader
+CSV → postgressql loader
 Backend API
 get_kpi_summary logic
 MCP server
