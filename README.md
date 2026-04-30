@@ -768,15 +768,6 @@ curl "http://localhost:8000/kpi/summary?ticker=ACME&kpi_name=Total%20Revenue%20(
 curl "http://localhost:8000/kpi/names"
 ```
 
-### Performance Optimization Tips
-
-1. **Add caching** for frequently queried companies/KPIs
-2. **Implement pagination** for large result sets
-3. **Monitor database slow query log** for missing indexes
-4. **Profile frontend** bundle size and rendering performance
-5. **Use CDN** for static assets in production
-6. **Enable query result caching** with Redis
-
 ---
 
 ## 📝 Data Format Reference
@@ -813,11 +804,15 @@ curl "http://localhost:8000/kpi/names"
 
 Potential enhancements:
 
-- [ ] Add caching layer (Redis)
-- [ ] Implement pagination for large datasets
 - [ ] Add more KPI analysis tools (volatility, growth rates)
 - [ ] Support for custom date ranges in frontend
 - [ ] Export to CSV functionality
 - [ ] Multi-user authentication
 - [ ] Real-time data updates
 - [ ] Advanced charting options (candlestick, OHLC)
+- [ ] **Add caching** for frequently queried companies/KPIs
+- [ ] **Implement pagination** for large result sets
+- [ ] **Monitor database slow query log** for missing indexes
+- [ ] **Profile frontend** bundle size and rendering performance
+- [ ] **Use CDN** for static assets in production
+- [ ] **Enable query result caching** with Redis
