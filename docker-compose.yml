@@ -1,6 +1,23 @@
-version: '3.8'
-
 services:
+  db:
+    image: postgres:15-alpine
+    container_name: yipitdata-db
+    environment:
+      POSTGRES_DB: yipitdata
+      POSTGRES_USER: kpi_user
+      POSTGRES_PASSWORD: kpi_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_postgres:/var/lib/postgresql/data
+    networks:
+      - yipitdata-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kpi_user -d yipitdata"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   backend:
     build:
       context: .
@@ -9,22 +26,22 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      # Persist SQLite database across container restarts
-      - db_data:/app/data
-      # Mount CSV data directory
-      - ./data:/app/data:ro
+      - ./data:/app/data
     environment:
       - PYTHONUNBUFFERED=1
-      - DATABASE_URL=sqlite:///./kpi.db
+      - DATABASE_URL=postgresql://kpi_user:kpi_password@db:5432/yipitdata
       - LOG_LEVEL=info
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - yipitdata-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 10s
-    networks:
-      - yipitdata-network
 
   frontend:
     build:
@@ -41,7 +58,7 @@ services:
       - yipitdata-network
 
 volumes:
-  db_data:
+  db_postgres:
     driver: local
 
 networks:

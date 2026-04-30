@@ -6,10 +6,19 @@ from datetime import datetime
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./kpi.db")
 
+# Configure connection args based on database type
+connect_args = {}
+if "sqlite" in DATABASE_URL:
+    connect_args = {"check_same_thread": False}
+elif "postgresql" in DATABASE_URL:
+    connect_args = {"connect_timeout": 10}
+
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {},
-    echo=False
+    connect_args=connect_args,
+    echo=False,
+    pool_pre_ping=True,
+    pool_recycle=3600
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
