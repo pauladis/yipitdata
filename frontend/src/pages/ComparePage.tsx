@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   BarChart,
@@ -11,7 +11,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { Loader, X } from 'lucide-react';
-import apiClient from '../utils/api';
+import apiClient, { Company } from '../utils/api';
 import '../styles/ComparePage.css';
 
 interface ComparisonData {
@@ -25,6 +25,10 @@ const ComparePage: React.FC = () => {
   const navigate = useNavigate();
   const [selectedTickers, setSelectedTickers] = useState<string[]>([]);
   const [tickerInput, setTickerInput] = useState<string>('');
+  const [availableCompanies, setAvailableCompanies] = useState<Company[]>([]);
+  const [filteredCompanies, setFilteredCompanies] = useState<Company[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const [availableKPIs, setAvailableKPIs] = useState<string[]>([]);
   const [selectedKPI, setSelectedKPI] = useState<string | null>(null);
   const [comparisonData, setComparisonData] = useState<ComparisonData[]>([]);
@@ -32,33 +36,75 @@ const ComparePage: React.FC = () => {
   const [comparing, setComparing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load available KPIs on mount
+  // Load companies and KPIs on mount
   useEffect(() => {
-    const loadKPIs = async () => {
+    const loadData = async () => {
       try {
-        const response = await apiClient.health(); // First check health
-        // Fetch available KPIs from backend
+        // Load all companies for filtering
+        const companiesResponse = await apiClient.searchCompanies();
+        setAvailableCompanies(companiesResponse.data.companies);
+
+        // Fetch available KPIs
         const kpisResponse = await fetch('http://localhost:8000/kpi/names');
         if (kpisResponse.ok) {
           const data = await kpisResponse.json();
           setAvailableKPIs(data);
         }
       } catch (err) {
-        console.error('Failed to load KPIs:', err);
+        console.error('Failed to load data:', err);
       } finally {
         setLoading(false);
       }
     };
-    loadKPIs();
+    loadData();
   }, []);
 
-  const handleAddTicker = () => {
-    const ticker = tickerInput.trim().toUpperCase();
-    if (ticker && !selectedTickers.includes(ticker)) {
-      setSelectedTickers([...selectedTickers, ticker]);
-      setTickerInput('');
+  // Handle ticker input changes and filter companies
+  const handleTickerInputChange = (value: string) => {
+    setTickerInput(value);
+    if (value.trim()) {
+      const filtered = availableCompanies.filter(
+        (company) =>
+          !selectedTickers.includes(company.ticker) &&
+          (company.ticker.toUpperCase().includes(value.toUpperCase()) ||
+            company.company_name.toUpperCase().includes(value.toUpperCase()))
+      );
+      setFilteredCompanies(filtered);
+      setShowDropdown(true);
+    } else {
+      setFilteredCompanies([]);
+      setShowDropdown(false);
     }
   };
+
+  // Handle company selection from dropdown
+  const handleSelectCompany = (company: Company) => {
+    if (!selectedTickers.includes(company.ticker)) {
+      setSelectedTickers([...selectedTickers, company.ticker]);
+    }
+    setTickerInput('');
+    setFilteredCompanies([]);
+    setShowDropdown(false);
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowDropdown(false);
+      }
+    };
+
+    if (showDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [showDropdown]);
 
   const handleRemoveTicker = (ticker: string) => {
     setSelectedTickers(selectedTickers.filter((t) => t !== ticker));
@@ -106,7 +152,7 @@ const ComparePage: React.FC = () => {
       <div className="compare-page">
         <div className="loading">
           <Loader size={32} className="spinner" />
-          <p>Loading KPIs...</p>
+          <p>Loading data...</p>
         </div>
       </div>
     );
@@ -125,24 +171,46 @@ const ComparePage: React.FC = () => {
 
       <section className="compare-form">
         <div className="form-group">
-          <label>Company Ticker:</label>
-          <div className="ticker-input-group">
-            <input
-              type="text"
-              placeholder="e.g., ACME, BUZZ, STRM"
-              value={tickerInput}
-              onChange={(e) => setTickerInput(e.target.value.toUpperCase())}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleAddTicker();
-                }
-              }}
-              className="text-input"
-            />
-            <button onClick={handleAddTicker} className="btn btn-primary">
-              Add Company
-            </button>
+          <label>Company Search:</label>
+          <div className="company-search-container" ref={dropdownRef}>
+            <div className="company-input-group">
+              <input
+                type="text"
+                placeholder="Search by ticker or company name (e.g., AC, ACME)..."
+                value={tickerInput}
+                onChange={(e) => handleTickerInputChange(e.target.value)}
+                onFocus={() => {
+                  if (tickerInput.trim()) {
+                    setShowDropdown(true);
+                  }
+                }}
+                className="text-input"
+              />
+            </div>
+
+            {showDropdown && filteredCompanies.length > 0 && (
+              <div className="dropdown-list">
+                {filteredCompanies.map((company) => (
+                  <div
+                    key={company.ticker}
+                    className="dropdown-item"
+                    onClick={() => handleSelectCompany(company)}
+                  >
+                    <div className="dropdown-ticker">{company.ticker}</div>
+                    <div className="dropdown-details">
+                      <div className="dropdown-name">{company.company_name}</div>
+                      <div className="dropdown-sector">{company.sector}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {showDropdown && filteredCompanies.length === 0 && tickerInput.trim() && (
+              <div className="dropdown-empty">
+                <p>No companies found matching "{tickerInput}"</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -150,17 +218,25 @@ const ComparePage: React.FC = () => {
           <div className="selected-tickers">
             <h4>Selected Companies ({selectedTickers.length}):</h4>
             <div className="ticker-tags">
-              {selectedTickers.map((ticker) => (
-                <div key={ticker} className="ticker-tag">
-                  <span>{ticker}</span>
-                  <button
-                    onClick={() => handleRemoveTicker(ticker)}
-                    className="remove-btn"
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-              ))}
+              {selectedTickers.map((ticker) => {
+                const company = availableCompanies.find((c) => c.ticker === ticker);
+                return (
+                  <div key={ticker} className="ticker-tag">
+                    <div className="ticker-tag-info">
+                      <span className="ticker-bold">{ticker}</span>
+                      <span className="ticker-name">
+                        {company?.company_name}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => handleRemoveTicker(ticker)}
+                      className="remove-btn"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

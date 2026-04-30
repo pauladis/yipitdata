@@ -41,6 +41,78 @@
   margin-bottom: 0.5rem;
 }
 
+.company-search-container {
+  position: relative;
+  width: 100%;
+}
+
+.company-input-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.dropdown-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-top: none;
+  border-radius: 0 0 0.5rem 0.5rem;
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 10;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.dropdown-item {
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transition: background-color 0.2s;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.dropdown-item:hover {
+  background-color: #f9fafb;
+}
+
+.dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.dropdown-ticker {
+  font-weight: 600;
+  color: #667eea;
+  min-width: 50px;
+}
+
+.dropdown-details {
+  flex: 1;
+}
+
+.dropdown-name {
+  font-size: 0.9rem;
+  color: #1f2937;
+  font-weight: 500;
+}
+
+.dropdown-sector {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+}
+
+.dropdown-empty {
+  padding: 1rem;
+  text-align: center;
+  color: #6b7280;
+  font-style: italic;
+}
+
 .ticker-input-group {
   display: flex;
   gap: 0.5rem;
@@ -82,13 +154,29 @@
 .ticker-tag {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: space-between;
+  gap: 0.75rem;
   background-color: #667eea;
   color: white;
-  padding: 0.5rem 1rem;
-  border-radius: 9999px;
-  font-size: 0.9rem;
-  font-weight: 500;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.ticker-tag-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.ticker-bold {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.ticker-name {
+  font-size: 0.8rem;
+  opacity: 0.9;
 }
 
 .remove-btn {
